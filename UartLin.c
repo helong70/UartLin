@@ -37,9 +37,7 @@ void Lin_Reset(void) {
 void UART_IRQHandler(void) {
 	// 读取Uart接收数据
 	uint8_t rx = UART_ReadByte();
-	
-	// 中断里表示当前为接收方向
-	lin_ctx.is_tx = false;
+	lin_ctx.timeout_cnt = 0; // 重置超时计数
 
 	// 状态机转换
 	switch (lin_ctx.state) {
