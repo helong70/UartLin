@@ -29,6 +29,7 @@ void Lin_Reset(void) {
 	lin_ctx.on_rx_done = Lin_RxCallback;
 	lin_ctx.checksum_mode = LIN_CHECKSUM_ENHANCED; // 默认增强校验
 	memset(lin_ctx.data, 0, sizeof(lin_ctx.data));
+	UART_SetBaud(19200); // 默认波特率
 }
 
 
