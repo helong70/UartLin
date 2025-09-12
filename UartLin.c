@@ -6,6 +6,50 @@
 
 
 static LinContext_t lin_ctx;
+// 初始化
+
+void UART_Init(void) {
+	// 伪代码：根据具体平台实现Uart初始化
+}
+void Lin_Init(void) {
+	Lin_Reset();
+	// UART初始化（伪代码，根据平台实现）
+	UART_Init();
+}
+void UART_SendByte(uint8_t byte) {
+	// 伪代码：根据具体平台实现Uart发送一个字节
+}
+
+// 发送BREAK：保存当前波特率，降低波特率发送0x00以延长低电平时间，然后恢复波特率
+void UART_SendBreak(void) {
+	#if (BREAK_MODE==SWITCH_BAUDRATE_BREAK_MODE)
+	UART_SetBaud(9600); // 13个比特时间的低电平，假设原始波特率为19200bps
+	// 发送 0x00（持续为低电平比特）
+	UART_SendByte(0x00);
+	#elif (BREAK_MODE==HARDWARE_BREAK_MODE)
+	// 硬件方式发送BREAK，具体实现依赖于MCU平台
+	#endif
+}
+
+
+#if (BREAK_MODE==SWITCH_BAUDRATE_BREAK_MODE)
+void UART_SetBaud(uint32_t baud){
+
+}
+#elif (BREAK_MODE==HARDWARE_BREAK_MODE)
+// 硬件方式接收BREAK中断回调
+void Uart_ReciveBreakCb(void) {
+	if(lin_ctx.state == LIN_STATE_BREAK) {
+		UART_SendByte(0xAA);
+		lin_ctx.state = LIN_STATE_SYNC;
+	}
+	else
+	{
+		// 非预期数据，复位状态机
+		Lin_Reset();
+	}
+}
+#endif
 
 // 超时阈值（根据实际定时器设置调整）
 #define LIN_TIMEOUT_THRESHOLD 1000
@@ -29,7 +73,9 @@ void Lin_Reset(void) {
 	lin_ctx.on_rx_done = Lin_RxCallback;
 	lin_ctx.checksum_mode = LIN_CHECKSUM_ENHANCED; // 默认增强校验
 	memset(lin_ctx.data, 0, sizeof(lin_ctx.data));
+	#if (BREAK_MODE==SWITCH_BAUDRATE_BREAK_MODE)
 	UART_SetBaud(19200); // 默认波特率
+	#endif
 }
 
 
@@ -44,6 +90,7 @@ void UART_IRQHandler(void) {
 		case LIN_STATE_IDLE:
 			break;
 		case LIN_STATE_BREAK:
+			#if (BREAK_MODE==SWITCH_BAUDRATE_BREAK_MODE)
 			if (rx == 0x00) { // SYNC
 				lin_ctx.state = LIN_STATE_SYNC;
 				// 收到 SYNC 后发送 0xAA（应答/占位符），具体值可根据协议调整
@@ -55,6 +102,7 @@ void UART_IRQHandler(void) {
 				// 非预期数据，复位状态机
 				Lin_Reset();
 			}
+			#else
 			break;
 		case LIN_STATE_SYNC:
 			if(rx==0xAA)
@@ -184,12 +232,7 @@ void Lin_TimeoutHandler(void) {
 	}
 }
 
-// 初始化
-void Lin_Init(void) {
-	Lin_Reset();
-	// UART初始化（伪代码，根据平台实现）
-	UART_Init();
-}
+
 
 void Lin_SetTxCallback(LinTxCallback_t cb) {
 	lin_ctx.on_tx_done = cb;
@@ -264,18 +307,5 @@ uint8_t Lin_IdToPid(uint8_t id) {
 	return pid;
 }
 
-// 发送BREAK：保存当前波特率，降低波特率发送0x00以延长低电平时间，然后恢复波特率
-void UART_SendBreak(void) {
 
-	UART_SetBaud(9600); // 13个比特时间的低电平，假设原始波特率为19200bps
-	// 发送 0x00（持续为低电平比特）
-	UART_SendByte(0x00);
-
-}
-
-// UART 平台相关函数声明（需由具体MCU实现）
-void UART_Init(void);
-void UART_SendByte(uint8_t byte);
-uint8_t UART_ReadByte(void);
-void UART_SetBaud(uint32_t baud);
 

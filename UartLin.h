@@ -5,6 +5,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define HARDWARE_BREAK_MODE 1
+#define SWITCH_BAUDRATE_BREAK_MODE 2
+
+#define BREAK_MODE SWITCH_BAUDRATE_BREAK_MODE
+
+
 typedef enum {
     LIN_STATE_IDLE = 0,
     LIN_STATE_BREAK,
